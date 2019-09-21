@@ -6,7 +6,4 @@ class Element():
 
     f = []
     p = []
-
-    def __init__(self):
-        logger.info('Init')
-        
+    b = 1
