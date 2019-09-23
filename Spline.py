@@ -2,6 +2,7 @@ import logging
 import numpy as np
 from Element import Element
 from itertools import accumulate
+from math import floor
 
 logger = logging.getLogger('Spline')
 
@@ -78,7 +79,7 @@ class Spline():
         logger.info(f'Read {points}')
 
         f = [p[-1] for p in points]
-a = len(points[0]) - 1
+        a = len(points[0]) - 1
         points = [p[:a] for p in points]
 
         mx = []
@@ -91,7 +92,7 @@ a = len(points[0]) - 1
         mn = np.array(a)
         K = self.K
         self.h = (mx - mn) * (1.0 / K)
-h = self.h
+        h = self.h
 
         self.elements = [Element() for el in range(pow(K, dim))]
         logger.info(f'{K}^{dim} elements created')
@@ -102,7 +103,7 @@ h = self.h
 
         logger.info('-' * 15)
         for I,el in enumerate(points):
-            p = [floor((el[i] - mn[i]) / h[i]) for i in range(dim)]
+            p = [floor((el[i] - mn[i]) / h[i]) - 1 for i in range(dim)]
             i = [pow(K,k)*p[k] for k in range(dim)]
             i = int(list(accumulate(i))[-1])
             logger.info(f'Point {el} added to element {i}')
@@ -111,7 +112,7 @@ h = self.h
 
         with open(f'{dim}d.txt','r') as f:
             lines = f.readlines()
-# Not implemented dim>10
+            # Not implemented dim>10
             self.indexs = [[int(c) for c in str(l)] for l in lines]
 
     def Calculate(self):
@@ -155,6 +156,3 @@ h = self.h
     def Solve(self):
         logger.info('Solve')
         return np.linalg.solve(self.A, self.F)
-
-    def Experiment(self):
-        logger.info('Experiment')
