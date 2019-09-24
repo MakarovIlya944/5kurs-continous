@@ -1,15 +1,17 @@
 import logging
 import numpy as np
-from Spline import Spline
+from SplineLine import Spline
+# from Element import Element
+# from itertools import accumulate
+# from math import floor
 
 logging.basicConfig(filename='log.txt', level=logging.INFO)
 logger = logging.getLogger('Main')
 
 def GeneratePoints():
     logger.info('GeneratePoints')
-    x = np.random.randint(-3, size=(4, 4), high=5)
+    x = np.random.randint(-30, size=(4, 4), high=50)
     np.savetxt('output.txt', x)
-
 
 def main():
     logger.info('Start')

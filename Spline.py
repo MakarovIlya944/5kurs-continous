@@ -47,10 +47,8 @@ class Spline():
         s = 1
         x = self.points[p]
         for k in range(self.dim):
-            _i = i % 4
-            i /= 4
-            # Поправить
-            s *= self.__f[_i](x[k], 1, self.h[k])
+            _i = self.indexs[i][k]
+            s *= self.__f[_i](x[k], el.mn[k], self.h[k])
 
     def __local_matrix(h):
         local_matrix = Spline.local_matrix * (1/h)
@@ -69,6 +67,10 @@ class Spline():
         local_matrix[2][0] /= (h*h)
         local_matrix[2][2] /= (h*h)
         return local_matrix
+
+    def __elemInit(d):
+        if d == 0:
+            return 
 
     def __init__(self, file):
         logger.info('Init')
@@ -93,8 +95,22 @@ class Spline():
         K = self.K
         self.h = (mx - mn) * (1.0 / K)
         h = self.h
+        k_part = 1.01
+        mx *= k_part
 
-        self.elements = [Element() for el in range(pow(K, dim))]
+        # self.elements = [Element() for el in range(pow(K, dim))]
+        rrange = range(K)
+        result = []
+        for d in dim:
+            result = [Element() for z in rrange]
+            
+
+        for x in rrange:
+            tmp = []
+            for y in rrange:
+                tmp.append([Element() for z in rrange])
+            self.elements.append(tmp)
+
         logger.info(f'{K}^{dim} elements created')
 
         l = range(4*pow(K, dim))
@@ -103,17 +119,20 @@ class Spline():
 
         logger.info('-' * 15)
         for I,el in enumerate(points):
-            p = [floor((el[i] - mn[i]) / h[i]) - 1 for i in range(dim)]
-            i = [pow(K,k)*p[k] for k in range(dim)]
-            i = int(list(accumulate(i))[-1])
-            logger.info(f'Point {el} added to element {i}')
-            self.elements[i].p.append(el)
+            p = [floor((el[i] - mn[i]) / h[i]) for i in range(dim)]
+            p = [i if K != i else K - 1 for i in p]
+            t = self.elements
+            for e in range(dim):
+                t = t[p[e]]
+            logger.info(f'Point {el} added to element {t.i}')
+            t.p.append(el)
+            t.f.append(f[I])
         logger.info('-' * 45)
 
         with open(f'{dim}d.txt','r') as f:
             lines = f.readlines()
             # Not implemented dim>10
-            self.indexs = [[int(c) for c in str(l)] for l in lines]
+            self.indexs = [[int(c) for c in str(int(l))] for l in lines]
 
     def Calculate(self):
         logger.info('Calculate')
@@ -122,8 +141,10 @@ class Spline():
 
     def MakeMatrix(self):
         logger.info('MakeMatrix')
-        for el in self.elements:
-            self.AppendLocalMatrix(el)
+        for x in self.elements:
+            for y in x:
+                for z in y:
+                    self.AppendLocalMatrix(z)
         
 
     def AppendLocalMatrix(self, el):
@@ -137,11 +158,13 @@ class Spline():
         for h in self.h:
             L.append(Spline.__local_matrix(h))
 
+        inds = self.indexs
         for I in nums:
             for J in nums:
                 value = 1
+                K = I*len(nums) + J
                 for i in range(self.dim):
-                    value *= el.b * L[I*len(nums) + J][i]
+                    value *= el.b * L[i][inds[K][I]][inds[K][J]]
 
                 for p in el.p:
                     value += w[p] * psi(el, p, I) * psi(el, p, J)
