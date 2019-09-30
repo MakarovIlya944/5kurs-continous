@@ -1,35 +1,43 @@
-import logging
-import numpy as np
 from Element import Element
-from itertools import accumulate
-import matplotlib.pyplot as plt
+from itertools import accumulate, permutations
 from math import floor
+import matplotlib.pyplot as plt
+import operator
+from time import gmtime, strftime
+import numpy as np
+import logging
 
-logger = logging.getLogger('Spline')
+with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
+    pass
+logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
+logger = logging.getLogger('Main')
 
 class Spline():
 
+    K = 1
+    dim = 1
+
     w = []
-    a = []
+
     elements = []
     points = []
-    K = 3
-    dim = 1
     h = []
+    mn = []
+    mx = []
+    indexs = []
+    n = []
+
     local_matrix = np.array([ 
         np.array([12, 6, -12, 6]),
         np.array([6, 4, -6, 2]),
         np.array([-12, -6, 12, -6]),
         np.array([6, 2, -6, 4])])
 
-    mn = []
-    mx = []
-    indexs = []
-
     A = []
     F = []
 
     __f = []
+    __localMatrixes = []
 
     def __f1(x, l, h):
         t = (x - l) / h
@@ -54,7 +62,7 @@ class Spline():
             s *= self.__f[_i](x[k], el.mn[k], self.h[k])
         return s
 
-    def __local_matrix(h):
+    def __localMatrix(h):
         local_matrix = Spline.local_matrix * (1/h)
 
         local_matrix[0][1] /= h
@@ -72,9 +80,17 @@ class Spline():
         local_matrix[2][2] /= (h*h)
         return local_matrix
 
+    def __elem(self, ind):
+        n = self.n
+        p = permutations([0,1],self.dim)
+        res = []
+        for el in p:
+            res.append(np.sum((np.array(ind) + np.array(el)) * n))
+        return res
+
     def __elemInit(self, d, mas):
         if d == 0:
-            return [Element(np.append(mas, i)*self.h + self.mn, np.append(mas, i)) for i in range(self.K)]
+            return [Element(np.append(mas, i)*self.h + self.mn, self.__elem(np.append(mas, i))) for i in range(self.K)]
         return [self.__elemInit(d-1, np.append(mas, i)) for i in range(self.K)]
 
     def __elemAdd(self, d, mas):
@@ -115,12 +131,18 @@ class Spline():
         mx *= k_part
 
         self.w = np.ones(len(points))
+        
+        for _h in self.h:
+            self.__localMatrixes.append(Spline.__localMatrix(_h))
 
-        # self.elements = [Element() for el in range(pow(K, dim))]
+        N = list(accumulate([K for e in range(dim-1)], operator.mul))
+        N.insert(0, 1)
+        self.n = np.array(N)
+
         self.elements = self.__elemInit(dim-1, [])
         logger.info(f'{K}^{dim} elements created')
 
-        l = range((K+1)*pow(2, dim))
+        l = range((2*(K+1))**dim)
         self.A = [np.zeros(len(l)) for i in l] 
         self.F = np.zeros(len(l))
 
@@ -135,8 +157,6 @@ class Spline():
             t.addP(el)
             t.addF(f[I])
             t.addW(self.w[I])
-            # t.p.append(el)
-            # t.f.append(f[I])
         logger.info('-' * 45)
 
         with open(f'{dim}d.txt','r') as f:
@@ -160,24 +180,23 @@ class Spline():
         psi = self.__psi
         local_f_number = 2**dim
 
-        L = []
-        for h in self.h:
-            L.append(Spline.__local_matrix(h))
+        pow_dim_2 = [2**(dim-l) for l in range(dim)]
+
+        L = self.__localMatrixes
 
         inds = self.indexs
         for I in nums:
             for J in nums:
                 value = 1
-                # K = I*len(nums) + J
                 for i in range(self.dim):
                     logger.debug(f'L[{i}][{inds[I][i]}][{inds[J][i]}] = {L[i][inds[I][i]][inds[J][i]]}')
                     value *= el.b * L[i][inds[I][i]][inds[J][i]]
 
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
-
-                i = list(accumulate([((I // local_f_number)%(2**(l+1))+el.indexes[l])*(2**(dim-l)) for l in range(dim)]))[-1] + I % local_f_number
-                j = list(accumulate([((J // local_f_number)%(2**(l+1))+el.indexes[l])*(2**(dim-l)) for l in range(dim)]))[-1] + J % local_f_number
+                
+                i = el.nodes[I]
+                j = el.nodes[J]
                 logger.debug(f'i={i}\tj={j}')
                 self.A[i][j] += value
 
@@ -192,18 +211,40 @@ class Spline():
     def Paint(self):
         logger.info('Paint')
         x = []
-        # function = []
-        # dirivate = []
         y = []
-        K = 5
+        z = []
+        K = 20
         psi = self.__psi
+        borders = []
+
+        # local functions per node count
+        lfnn = 2**self.dim
+
+        # local functions per element count 
+        lfne = 4**self.dim
+
+        # range local functions per element count
+        rle = range(lfne)
+
         if self.dim == 1:
             elem_steps = [self.h[0] * (el/K) for el in range(K)]
             for i,el in enumerate(self.elements):
                 _x = [_el + el.mn for _el in elem_steps]
                 x.extend(_x)
-                # function.extend([self.answer[0+i*4] * psi(el, y, 0+i*4) + self.answer[2+i*4] * psi(el, y, 2+i*4) for y in _x])
-                # dirivate.extend([self.answer[1+i*4] * psi(el, y, 1+i*4) + self.answer[3+i*4] * psi(el, y, 3+i*4) for y in _x])
-                y.extend([list(accumulate([self.answer[v+i*2] * psi(el, y, v) for v in range(4)]))[-1] for y in _x])
-            plt.plot(x,y,'-',self.points, self.f, 'o')
+                y.extend([list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x])
+                borders.append(el.mn)
+            _x = el.mn + self.h[0]
+            x.append(_x)
+            y.append(list(accumulate([self.answer[v+i*lfnn] * psi(el, _x, v) for v in rle]))[-1])
+            plt.plot(x, y, '-', self.points, self.f, 'o', borders, np.ones(self.K) * 5, '+')
             plt.show()
+        elif self.dim == 2:
+            elem_steps = [list(accumulate(np.ones(K, 1) * (self.h[0] / K))), list(accumulate(np.ones(K, 1) * (self.h[1] / K)))]
+            for i,el_y in enumerate(self.elements):
+                _y = [_el + el_y.mn for _el in elem_steps[1]]
+                y.extend(_y)
+                for j,el_x in enumerate(el_y):
+                    _x = [_el + el_x.mn for _el in elem_steps[0]]
+                    if i == 0:
+                        x.extend(_x)
+                    z.extend([list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x])
