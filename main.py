@@ -2,9 +2,12 @@ import logging
 import numpy as np
 from Spline import Spline
 # from Element import Element
-# from itertools import accumulate
+# from itertools import accumulate, combinations_with_replacement, permutations
 # from math import floor
 # import matplotlib.pyplot as plt
+# from matplotlib import cm
+# import operator
+# from mpl_toolkits.mplot3d import Axes3D
 
 logging.basicConfig(filename='log.txt', level=logging.DEBUG)
 logger = logging.getLogger('Main')

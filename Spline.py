@@ -14,7 +14,7 @@ logger = logging.getLogger('Main')
 
 class Spline():
 
-    K = 1
+    K = 2
     dim = 1
 
     w = []
@@ -82,15 +82,28 @@ class Spline():
 
     def __elem(self, ind):
         n = self.n
-        p = permutations([0,1],self.dim)
+        p = combinations_with_replacement([0,1],self.dim)
         res = []
-        for el in p:
-            res.append(np.sum((np.array(ind) + np.array(el)) * n))
+        tmp = set()
+        for comb in p:
+            comb = permutations(comb, self.dim)
+            for el in comb:
+                tmp.add(el)
+        for el in tmp:
+            res.append(int(np.sum((np.array(ind) + np.array(el)) * n)))
         return res
 
     def __elemInit(self, d, mas):
+        r = []
+        r.reverse()
         if d == 0:
-            return [Element(np.append(mas, i)*self.h + self.mn, self.__elem(np.append(mas, i))) for i in range(self.K)]
+            res = []
+            for i in range(self.K):
+                mn = list(np.append(mas, i)*self.h)
+                # reverse problem
+                mn = np.array(mn.reverse())
+                res.append(Element(mn + self.mn, self.__elem(np.append(mas, i))))
+            return res
         return [self.__elemInit(d-1, np.append(mas, i)) for i in range(self.K)]
 
     def __elemAdd(self, d, mas):
@@ -135,7 +148,7 @@ class Spline():
         for _h in self.h:
             self.__localMatrixes.append(Spline.__localMatrix(_h))
 
-        N = list(accumulate([K for e in range(dim-1)], operator.mul))
+        N = list(accumulate([K+1 for e in range(dim-1)], operator.mul))
         N.insert(0, 1)
         self.n = np.array(N)
 
@@ -195,8 +208,8 @@ class Spline():
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
                 
-                i = el.nodes[I // local_f_numbers]*local_f_numbers + I % local_f_numbers
-                j = el.nodes[J // local_f_numbers]* local_f_numbers + J % local_f_numbers
+                i = el.nodes[I // local_f_number] * local_f_number + I % local_f_number
+                j = el.nodes[J // local_f_number] * local_f_number + J % local_f_number
                 logger.debug(f'i={i}\tj={j}')
                 self.A[i][j] += value
 
@@ -213,7 +226,7 @@ class Spline():
         x = []
         y = []
         z = []
-        K = 20
+        K = 2
         psi = self.__psi
         borders = []
 
@@ -239,12 +252,24 @@ class Spline():
             plt.plot(x, y, '-', self.points, self.f, 'o', borders, np.ones(self.K) * 5, '+')
             plt.show()
         elif self.dim == 2:
-            elem_steps = [list(accumulate(np.ones(K, 1) * (self.h[0] / K))), list(accumulate(np.ones(K, 1) * (self.h[1] / K)))]
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')   
+            elem_steps = []
+            z = [[] for el in range(len(self.elements) * K)]
+            for i in range(self.dim):
+                elem_steps.append(list(accumulate(np.ones(K) * (self.h[i] / K))))
             for i,el_y in enumerate(self.elements):
-                _y = [_el + el_y.mn for _el in elem_steps[1]]
+                _y = [_el + el_y[0].mn[1] for _el in elem_steps[1]]
                 y.extend(_y)
-                for j,el_x in enumerate(el_y):
-                    _x = [_el + el_x.mn for _el in elem_steps[0]]
+                for el_x in el_y:
+                    _x = [_el + el_x.mn[0] for _el in elem_steps[0]]
                     if i == 0:
                         x.extend(_x)
-                    z.extend([list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x])
+                    for cur_y in range(K):
+                        z[i*K + cur_y].extend([np.sum([self.answer[v+i*lfnn] * psi(el_x, [_x[cur_x],_y[cur_y]], v) for v in rle]) for cur_x in range(K)])
+            x, y = np.meshgrid(x, y)
+            z = np.array(z)
+            surf = ax.plot_surface(x, y, z)
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+            # plt.plot([np.array(p, self.f[i]) for i,p in enumerate(self.points)], 'o')
+            plt.show()
