@@ -195,8 +195,8 @@ class Spline():
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
                 
-                i = el.nodes[I]
-                j = el.nodes[J]
+                i = el.nodes[I // local_f_numbers]*local_f_numbers + I % local_f_numbers
+                j = el.nodes[J // local_f_numbers]* local_f_numbers + J % local_f_numbers
                 logger.debug(f'i={i}\tj={j}')
                 self.A[i][j] += value
 
