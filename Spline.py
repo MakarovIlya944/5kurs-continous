@@ -12,6 +12,8 @@ with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
 logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
 logger = logging.getLogger('Main')
 
+numberLocalMatrix = 0
+
 class Spline():
 
     K = 2
@@ -91,17 +93,15 @@ class Spline():
                 tmp.add(el)
         for el in tmp:
             res.append(int(np.sum((np.array(ind) + np.array(el)) * n)))
+        res.sort()
         return res
 
     def __elemInit(self, d, mas):
-        r = []
-        r.reverse()
         if d == 0:
             res = []
             for i in range(self.K):
                 mn = list(np.append(mas, i)*self.h)
-                # reverse problem
-                mn = np.array(mn.reverse())
+                mn = np.array(mn)
                 res.append(Element(mn + self.mn, self.__elem(np.append(mas, i))))
             return res
         return [self.__elemInit(d-1, np.append(mas, i)) for i in range(self.K)]
@@ -157,6 +157,7 @@ class Spline():
 
         l = range((2*(K+1))**dim)
         self.A = [np.zeros(len(l)) for i in l] 
+        self._A = np.copy(self.A)
         self.F = np.zeros(len(l))
 
         logger.info('-' * 15)
@@ -187,6 +188,7 @@ class Spline():
         self.__elemAdd(self.dim, self.elements)
 
     def AppendLocalMatrix(self, el):
+        global numberLocalMatrix
         logger.info('MakeLocalMatrix')
         dim = self.dim
         nums = range(pow(4, dim))
@@ -200,21 +202,27 @@ class Spline():
         inds = self.indexs
         for I in nums:
             for J in nums:
-                value = 1
+                value = el.b
                 for i in range(self.dim):
                     logger.debug(f'L[{i}][{inds[I][i]}][{inds[J][i]}] = {L[i][inds[I][i]][inds[J][i]]}')
-                    value *= el.b * L[i][inds[I][i]][inds[J][i]]
+                    value *= L[i][inds[I][i]][inds[J][i]]
 
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
+                    # print(f'el:{numberLocalMatrix}n:{i}value:{value}')
                 
                 i = el.nodes[I // local_f_number] * local_f_number + I % local_f_number
                 j = el.nodes[J // local_f_number] * local_f_number + J % local_f_number
                 logger.debug(f'i={i}\tj={j}')
+                
+                self._A[i][j] = numberLocalMatrix + 1
+                # self._A[i][j] = value
                 self.A[i][j] += value
 
             for _i, p in enumerate(el.p):
                 self.F[i] += el.w[_i] * psi(el, p, I) * el.f[_i]
+        np.savetxt(f'step_{numberLocalMatrix}.txt',self._A,fmt='%.0f')
+        numberLocalMatrix += 1
 
     def Solve(self):
         logger.info('Solve')
@@ -226,7 +234,7 @@ class Spline():
         x = []
         y = []
         z = []
-        K = 2
+        K = 10
         psi = self.__psi
         borders = []
 
@@ -255,21 +263,34 @@ class Spline():
             fig = plt.figure()
             ax = fig.gca(projection='3d')   
             elem_steps = []
-            z = [[] for el in range(len(self.elements) * K)]
+            z = [np.zeros(len(self.elements) * K) for el in range(len(self.elements) * K)]
             for i in range(self.dim):
                 elem_steps.append(list(accumulate(np.ones(K) * (self.h[i] / K))))
-            for i,el_y in enumerate(self.elements):
-                _y = [_el + el_y[0].mn[1] for _el in elem_steps[1]]
-                y.extend(_y)
-                for el_x in el_y:
-                    _x = [_el + el_x.mn[0] for _el in elem_steps[0]]
+            for i,el_x in enumerate(self.elements):
+                _x = [_el + el_x[0].mn[0] for _el in elem_steps[0]]
+                x.extend(_x)
+                for j,el_y in enumerate(el_x):
+                    _y = [_el + el_y.mn[1] for _el in elem_steps[1]]
                     if i == 0:
-                        x.extend(_x)
-                    for cur_y in range(K):
-                        z[i*K + cur_y].extend([np.sum([self.answer[v+i*lfnn] * psi(el_x, [_x[cur_x],_y[cur_y]], v) for v in rle]) for cur_x in range(K)])
+                        y.extend(_y)
+                    for cur_x in range(K):
+                        for cur_y in range(K):
+                            _I = i*K + cur_x
+                            _J = j*K + cur_y
+                            z[_I][_J] = np.sum([self.answer[v+i*lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
             x, y = np.meshgrid(x, y)
             z = np.array(z)
             surf = ax.plot_surface(x, y, z)
-            fig.colorbar(surf, shrink=0.5, aspect=5)
-            # plt.plot([np.array(p, self.f[i]) for i,p in enumerate(self.points)], 'o')
+            # ax.hold(True)
+            # ax = fig.add_subplot(111, projection='3d')
+            # for i,p in enumerate(self.points):
+            #     # Make data
+            #     u = np.linspace(0, 2 * np.pi, 100)
+            #     v = np.linspace(0, np.pi, 100)
+            #     x = 10 * np.outer(np.cos(u), np.sin(v))
+            #     y = 10 * np.outer(np.sin(u), np.sin(v))
+            #     z = 10 * np.outer(np.ones(np.size(u)), np.cos(v))
+            #     ax.plot_surface(x, y, z, color='b')
+            # a = [np.append(p, self.f[i]) for i,p in enumerate(self.points)]
+            # ax.scatter(a, color='green')
             plt.show()

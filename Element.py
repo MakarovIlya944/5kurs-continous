@@ -12,7 +12,7 @@ class Element():
     f = []
     p = []
     w = []
-    b = 0.9
+    b = 0
     mn = 0
 
     def __init__(self, _mn, _inds):
@@ -20,17 +20,17 @@ class Element():
         Element.n += 1
         self.mn = _mn
         self.nodes = [int(el) for el in _inds]
+        self.p = []
+        self.f = []
+        self.w = []
 
     def addP(self, point):
-        self.p = list(self.p)
         self.p.append(point)
 
     def addF(self, point):
-        self.f = list(self.f)
         self.f.append(point)
 
     def addW(self, w):
-        self.w = list(self.w)
         self.w.append(w)
 
     
