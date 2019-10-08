@@ -1,8 +1,11 @@
 from Element import Element
-from itertools import accumulate, permutations
+from itertools import accumulate, combinations_with_replacement, permutations
 from math import floor
 import matplotlib.pyplot as plt
+from matplotlib import cm
+import matplotlib
 import operator
+from mpl_toolkits.mplot3d import Axes3D
 from time import gmtime, strftime
 import numpy as np
 import logging
@@ -16,7 +19,9 @@ numberLocalMatrix = 0
 
 class Spline():
 
-    K = 2
+    paint_K = 10
+
+    K = 1
     dim = 1
 
     w = []
@@ -113,10 +118,12 @@ class Spline():
         for i in mas:
             self.__elemAdd(d-1, i)
 
-    def __init__(self, file):
+    def __init__(self, file, _K, _paint_K=10):
         logger.info('Init')
 
         self.__f = [Spline.__f1, Spline.__f2, Spline.__f3, Spline.__f4]
+        self.K = _K
+        self.paint_K = _paint_K
 
         points = np.loadtxt(file)
         logger.info(f'Read {points}')
@@ -234,7 +241,7 @@ class Spline():
         x = []
         y = []
         z = []
-        K = 10
+        K = self.paint_K
         psi = self.__psi
         borders = []
 
@@ -277,7 +284,7 @@ class Spline():
                         for cur_y in range(K):
                             _I = i*K + cur_x
                             _J = j*K + cur_y
-                            z[_I][_J] = np.sum([self.answer[v+i*lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
+                            z[_I][_J] = np.sum([self.answer[el_y.nodes[v//lfnn]*lfnn+v%lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
             x, y = np.meshgrid(x, y)
             z = np.array(z)
             surf = ax.plot_surface(x, y, z)

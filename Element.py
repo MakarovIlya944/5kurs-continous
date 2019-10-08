@@ -32,5 +32,3 @@ class Element():
 
     def addW(self, w):
         self.w.append(w)
-
-    
