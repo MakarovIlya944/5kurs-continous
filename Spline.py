@@ -155,9 +155,13 @@ class Spline():
         for _h in self.h:
             self.__localMatrixes.append(Spline.__localMatrix(_h))
 
-        N = list(accumulate([K+1 for e in range(dim-1)], operator.mul))
-        N.insert(0, 1)
-        self.n = np.array(N)
+        self.nElem = accumulate(K, operator.mul)
+        self.nNodes = accumulate([el+1 for el in K], operator.mul)
+
+        if dim == 1:
+            self.net = np.array(range(K))*self.h
+        elif dim == 2:
+            self.net = np.array(range(K))*self.h
 
         self.elements = self.__elemInit(dim-1, [])
         logger.info(f'{K}^{dim} elements created')
