@@ -26,6 +26,7 @@ class Spline():
 
     w = []
 
+    net = []
     elements = []
     points = []
     h = []
@@ -122,7 +123,7 @@ class Spline():
         logger.info('Init')
 
         self.__f = [Spline.__f1, Spline.__f2, Spline.__f3, Spline.__f4]
-        self.K = _K
+        self.kElem = _K
         self.paint_K = _paint_K
 
         points = np.loadtxt(file)
@@ -144,7 +145,7 @@ class Spline():
         mn = np.array(a)
         self.mn = mn
         self.mx = mx
-        K = self.K
+        K = self.kElem
         self.h = (mx - mn) * (1.0 / K)
         h = self.h
         k_part = 1.01
@@ -155,34 +156,50 @@ class Spline():
         for _h in self.h:
             self.__localMatrixes.append(Spline.__localMatrix(_h))
 
-        self.nElem = accumulate(K, operator.mul)
-        self.nNodes = accumulate([el+1 for el in K], operator.mul)
+        self.kElem = K
+        self.kNode = [k+1 for k in K]
+        kn = self.kNode
+        self.nElem = list(accumulate(K, operator.mul))[-1]
+        self.nNodes = list(accumulate([el+1 for el in K], operator.mul))[-1]
+
+        N = list(accumulate(K[:len(K)-1], operator.mul))
+        N.insert(0, 1)
+        N.reverse()
+        self.n = np.array(N)
 
         if dim == 1:
-            self.net = np.array(range(K))*self.h
+            self.netX = np.ones(kn[0])*mn + np.array(range(kn[0]))*self.h
+            self.net = self.netX
+            self.elements = [Element(self.net[i], [i, i+1]) for i in range(self.nElem)]
         elif dim == 2:
-            self.net = np.array(range(K))*self.h
+            self.netX = np.ones(kn[0])*mn[0] + np.array(range(kn[0]))*self.h[0]
+            self.netY = np.ones(kn[1])*mn[1] + np.array(range(kn[1]))*self.h[1]
+            mesh = np.meshgrid(self.netX, self.netY)
+            f_i = lambda ind: [ind, ind + 1, ind + kn[0], ind + kn[0] + 1]
+            for i in range(K[1]):
+                for j in range(K[0]):
+                    ind = i*kn[0] + j
+                    self.net.append(np.array([mesh[0][i][j],mesh[1][i][j]]))
+                    self.elements.append(Element(self.net[ind], f_i(ind)))
+                self.net.append(np.array([mesh[0][i][K[0]],mesh[1][i][K[0]]]))
+            for j in range(len(self.netX)):
+                self.net.append(np.array([mesh[0][K[1]][j],mesh[1][K[1]][j]]))
 
-        self.elements = self.__elemInit(dim-1, [])
-        logger.info(f'{K}^{dim} elements created')
-
-        l = range((2*(K+1))**dim)
+        logger.info(f'{self.nElem} elements created')
+        l = list(accumulate([k*2 for k in kn], operator.mul))[-1]
+        l = range(l)
         self.A = [np.zeros(len(l)) for i in l] 
         self._A = np.copy(self.A)
         self.F = np.zeros(len(l))
 
-        logger.info('-' * 15)
         for I,el in enumerate(points):
             p = [floor((el[i] - mn[i]) / h[i]) for i in range(dim)]
-            p = list([i if K != i else K - 1 for i in p])
-            t = self.elements
-            for e in range(dim):
-                t = t[p[e]]
+            p = np.array([i if K[v] != i else K[v] - 1 for v,i in enumerate(p)]) * np.array(self.n)
+            t = self.elements[np.sum(p)]
             logger.info(f'Point {el} added to element {t.i}')
             t.addP(el)
             t.addF(f[I])
             t.addW(self.w[I])
-        logger.info('-' * 45)
 
         with open(f'{dim}d.txt','r') as f:
             lines = f.readlines()
@@ -196,7 +213,8 @@ class Spline():
 
     def MakeMatrix(self):
         logger.info('MakeMatrix')
-        self.__elemAdd(self.dim, self.elements)
+        for el in self.elements:
+            self.AppendLocalMatrix(el)
 
     def AppendLocalMatrix(self, el):
         global numberLocalMatrix
@@ -205,8 +223,6 @@ class Spline():
         nums = range(pow(4, dim))
         psi = self.__psi
         local_f_number = 2**dim
-
-        pow_dim_2 = [2**(dim-l) for l in range(dim)]
 
         L = self.__localMatrixes
 
@@ -277,7 +293,7 @@ class Spline():
             z = [np.zeros(len(self.elements) * K) for el in range(len(self.elements) * K)]
             for i in range(self.dim):
                 elem_steps.append(list(accumulate(np.ones(K) * (self.h[i] / K))))
-            for i,el_x in enumerate(self.elements):
+            for i,el in enumerate(self.elements):
                 _x = [_el + el_x[0].mn[0] for _el in elem_steps[0]]
                 x.extend(_x)
                 for j,el_y in enumerate(el_x):
