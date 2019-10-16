@@ -310,10 +310,10 @@ def GeneratePoints(random=True, dim=1):
         elif dim == 2:
             x = []
             k = 1.0
-            d = 10.0 / k
-            for i in np.arange(-d,0):
-                for j in np.arange(0,d):
-                    x.append(np.array([i*k, j*k, i*i*k*k]))
+            d = 10.0
+            for i in np.arange(-d,0,k):
+                for j in np.arange(0,d,k):
+                    x.append(np.array([i, j, i+j]))
     np.savetxt('input.txt', x)
 
 def main():
@@ -321,9 +321,9 @@ def main():
 
     GeneratePoints(False, 2)
 
-    s = Spline('input.txt', np.array([2,1]), 50)
+    s = Spline('input.txt', np.array([2,1]), 10)
     s.MakeMatrix()
-    np.savetxt('before_solveA.txt',s.A, fmt='%1.2e')
+    np.savetxt('before_solveA.txt',s.A, fmt='%1.2f')
     np.savetxt('before_solveF.txt',s.F, fmt='%1.2f')
     plt.matshow(s.A)
     ans = s.Solve()
