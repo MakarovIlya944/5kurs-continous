@@ -155,14 +155,22 @@ class Spline():
         for _h in self.h:
             self.__localMatrixes.append(Spline.__localMatrix(_h))
 
-        N = list(accumulate([K+1 for e in range(dim-1)], operator.mul))
+        N = list(accumulate(np.ones(dim-1) + np.array(K[:-1]), operator.mul))
         N.insert(0, 1)
         self.n = np.array(N)
 
+        self.kElem = K
+        self.kNode = [k+1 for k in K]
+        kn = self.kNode
+        self.nElem = list(accumulate(K, operator.mul))[-1]
+        self.nNodes = list(accumulate([el+1 for el in K], operator.mul))[-1]
+
         self.elements = self.__elemInit(dim-1, [])
-        logger.info(f'{K}^{dim} elements created')
+        logger.info(f'{self.nElem}^{dim} elements created')
 
         l = range((2*(K+1))**dim)
+        l = list(accumulate([k*2 for k in kn], operator.mul))[-1]
+        l = range(l)
         self.A = [np.zeros(len(l)) for i in l] 
         self._A = np.copy(self.A)
         self.F = np.zeros(len(l))
@@ -264,7 +272,7 @@ class Spline():
             _x = el.mn + self.h[0]
             x.append(_x)
             y.append(list(accumulate([self.answer[v+i*lfnn] * psi(el, _x, v) for v in rle]))[-1])
-            plt.plot(x, y, '-', self.points, self.f, 'o', borders, np.ones(self.K) * 5, '+')
+            plt.plot(x, y, '-', self.points, self.f, 'o', borders, np.ones(self.K[0]) * 5, '+')
             plt.show()
         elif self.dim == 2:
             fig = plt.figure()

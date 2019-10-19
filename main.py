@@ -44,7 +44,7 @@ def main():
     f = PointsFabric(2, lambda x,y: x*x,lambda x,y: 0,[[-1,1,0.1],[-1,0,0.1]])
     f.generate()
 
-    s = Spline('input.txt', 2, 5)
+    s = Spline('input.txt', [2,2], 5)
     s.MakeMatrix()
     np.savetxt('before_solveA.txt',s.A, fmt='%1.2e')
     np.savetxt('before_solveF.txt',s.F, fmt='%1.2f')
