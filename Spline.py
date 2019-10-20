@@ -210,8 +210,6 @@ class Spline():
         psi = self.__psi
         local_f_number = 2**dim
 
-        pow_dim_2 = [2**(dim-l) for l in range(dim)]
-
         L = self.__localMatrixes
 
         inds = self.indexs
@@ -224,7 +222,6 @@ class Spline():
 
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
-                    # print(f'el:{numberLocalMatrix}n:{i}value:{value}')
                 
                 i = el.nodes[I // local_f_number] * local_f_number + I % local_f_number
                 j = el.nodes[J // local_f_number] * local_f_number + J % local_f_number
@@ -244,7 +241,7 @@ class Spline():
         self.answer = np.linalg.solve(self.A, self.F)
         return self.answer
 
-    def Paint(self):
+    def Paint(self, points=None):
         logger.info('Paint')
         x = []
         y = []
@@ -272,15 +269,23 @@ class Spline():
             _x = el.mn + self.h[0]
             x.append(_x)
             y.append(list(accumulate([self.answer[v+i*lfnn] * psi(el, _x, v) for v in rle]))[-1])
-            plt.plot(x, y, '-', self.points, self.f, 'o', borders, np.ones(self.K[0]) * 5, '+')
+            plt.plot(x, y, '-')
+            if points:
+                xs = []
+                ys = []
+                for p in points:
+                    xs.append(p[0])
+                    ys.append(p[1])
+                plt.plot(xs, ys, 'o')
             plt.show()
         elif self.dim == 2:
             fig = plt.figure()
             ax = fig.gca(projection='3d')   
             elem_steps = []
-            z = [np.zeros(len(self.elements[0]) * K) for el in range(len(self.elements) * K)]
+            rng = range(K+1)
+            z = [np.zeros(self.kElem[0] * K + 1) for el in range(self.kElem[1] * K + 1)]
             for i in range(self.dim):
-                elem_steps.append(list(accumulate(np.ones(K) * (self.h[i] / K))))
+                elem_steps.append(list(accumulate(np.insert(np.ones(K) * (self.h[i] / K), 0, 0))))
             for i,el_x in enumerate(self.elements):
                 _x = [_el + el_x[0].mn[0] for _el in elem_steps[0]]
                 x.extend(_x)
@@ -288,24 +293,21 @@ class Spline():
                     _y = [_el + el_y.mn[1] for _el in elem_steps[1]]
                     if i == 0:
                         y.extend(_y)
-                    for cur_x in range(K):
-                        for cur_y in range(K):
+                    for cur_x in rng:
+                        for cur_y in rng:
                             _I = i*K + cur_x
                             _J = j*K + cur_y
                             z[_I][_J] = np.sum([self.answer[el_y.nodes[v//lfnn]*lfnn+v%lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
             y, x = np.meshgrid(y, x)
             z = np.array(z)
-            surf = ax.plot_surface(x, y, z)
-            # ax.hold(True)
-            # ax = fig.add_subplot(111, projection='3d')
-            # for i,p in enumerate(self.points):
-            #     # Make data
-            #     u = np.linspace(0, 2 * np.pi, 100)
-            #     v = np.linspace(0, np.pi, 100)
-            #     x = 10 * np.outer(np.cos(u), np.sin(v))
-            #     y = 10 * np.outer(np.sin(u), np.sin(v))
-            #     z = 10 * np.outer(np.ones(np.size(u)), np.cos(v))
-            #     ax.plot_surface(x, y, z, color='b')
-            # a = [np.append(p, self.f[i]) for i,p in enumerate(self.points)]
-            # ax.scatter(a, color='green')
+            ax.plot_surface(x, y, z)
+            if points:
+                xs = []
+                ys = []
+                zs = []
+                for p in points:
+                    xs.append(p[0])
+                    ys.append(p[1])
+                    zs.append(p[2]*1.1)
+                ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
             plt.show()

@@ -28,30 +28,33 @@ class PointsFabric():
 
     def generate(self):
         points = []
+        data = []
         if self.d == 1:
             for x in self.r[0]:
                 points.append(np.array([x, self.f(x) + self.q(x)]))
+                data.append(np.array([x, self.f(x)]))
         elif self.d == 2:
             for x in self.r[0]:
                 for y in self.r[1]:
                     points.append(np.array([x, y, self.f(x,y) + self.q(x,y)]))
+                    data.append(np.array([x, y, self.f(x,y)]))
         np.savetxt('input.txt', points)
-        return points
+        return data
             
 def main():
     logger.info('Start')
 
-    f = PointsFabric(2, lambda x,y: x*x,lambda x,y: 0,[[-1,1,0.1],[-1,0,0.1]])
-    f.generate()
+    f = PointsFabric(1, lambda x: x*x,lambda x: 0,[[-1,1,0.2]])
+    potins = f.generate()
 
-    s = Spline('input.txt', [2,2], 5)
+    s = Spline('input.txt', [1], 10)
     s.MakeMatrix()
     np.savetxt('before_solveA.txt',s.A, fmt='%1.2e')
     np.savetxt('before_solveF.txt',s.F, fmt='%1.2f')
     # plt.matshow(s.A)
     ans = s.Solve()
     np.savetxt('answer.txt',ans, fmt='%1.2f')
-    s.Paint()
+    s.Paint(potins)
 
 if __name__ == '__main__':
     main()
