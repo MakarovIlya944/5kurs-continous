@@ -15,6 +15,7 @@ with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
 logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
 logger = logging.getLogger('Main')
 
+
 numberLocalMatrix = 0
 
 class Spline():
@@ -104,12 +105,12 @@ class Spline():
     def __elemInit(self, d, mas):
         if d == 0:
             res = []
-            for i in range(self.K):
+            for i in range(self.K[self.dim-d-1]):
                 mn = list(np.append(mas, i)*self.h)
                 mn = np.array(mn)
                 res.append(Element(mn + self.mn, self.__elem(np.append(mas, i))))
             return res
-        return [self.__elemInit(d-1, np.append(mas, i)) for i in range(self.K)]
+        return [self.__elemInit(d-1, np.append(mas, i)) for i in range(self.K[self.dim-d-1])]
 
     def __elemAdd(self, d, mas):
         if d == 0:
@@ -122,7 +123,7 @@ class Spline():
         logger.info('Init')
 
         self.__f = [Spline.__f1, Spline.__f2, Spline.__f3, Spline.__f4]
-        self.K = _K
+        self.K = np.array(_K)
         self.paint_K = _paint_K
 
         points = np.loadtxt(file)
@@ -145,10 +146,10 @@ class Spline():
         self.mn = mn
         self.mx = mx
         K = self.K
+        k_part = 1.10
+        mx *= k_part
         self.h = (mx - mn) * (1.0 / K)
         h = self.h
-        k_part = 1.01
-        mx *= k_part
 
         self.w = np.ones(len(points))
         
@@ -168,17 +169,16 @@ class Spline():
         self.elements = self.__elemInit(dim-1, [])
         logger.info(f'{self.nElem}^{dim} elements created')
 
-        l = range((2*(K+1))**dim)
         l = list(accumulate([k*2 for k in kn], operator.mul))[-1]
         l = range(l)
         self.A = [np.zeros(len(l)) for i in l] 
         self._A = np.copy(self.A)
         self.F = np.zeros(len(l))
 
-        logger.info('-' * 15)
+        logger.info('-' * 45)
         for I,el in enumerate(points):
-            p = [floor((el[i] - mn[i]) / h[i]) for i in range(dim)]
-            p = list([i if K != i else K - 1 for i in p])
+            p = np.floor((el-mn)/h)
+            p = list([int(i) if K[ind] != int(i) else K[ind] - 1 for ind,i in enumerate(p)])
             t = self.elements
             for e in range(dim):
                 t = t[p[e]]
@@ -278,7 +278,7 @@ class Spline():
             fig = plt.figure()
             ax = fig.gca(projection='3d')   
             elem_steps = []
-            z = [np.zeros(len(self.elements) * K) for el in range(len(self.elements) * K)]
+            z = [np.zeros(len(self.elements[0]) * K) for el in range(len(self.elements) * K)]
             for i in range(self.dim):
                 elem_steps.append(list(accumulate(np.ones(K) * (self.h[i] / K))))
             for i,el_x in enumerate(self.elements):
@@ -293,7 +293,7 @@ class Spline():
                             _I = i*K + cur_x
                             _J = j*K + cur_y
                             z[_I][_J] = np.sum([self.answer[el_y.nodes[v//lfnn]*lfnn+v%lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
-            x, y = np.meshgrid(x, y)
+            y, x = np.meshgrid(y, x)
             z = np.array(z)
             surf = ax.plot_surface(x, y, z)
             # ax.hold(True)
