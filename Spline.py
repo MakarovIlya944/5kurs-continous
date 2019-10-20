@@ -2,6 +2,8 @@ from Element import Element
 from itertools import accumulate, combinations_with_replacement, permutations
 from math import floor
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import cm
 import matplotlib
 import operator
@@ -10,9 +12,9 @@ from time import gmtime, strftime
 import numpy as np
 import logging
 
-with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
+with open(f'log-{strftime("%H", gmtime())}.txt','w') as f:
     pass
-logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
+logging.basicConfig(filename=f'log-{strftime("%H", gmtime())}.txt', level=logging.DEBUG)
 logger = logging.getLogger('Main')
 
 
@@ -243,12 +245,14 @@ class Spline():
 
     def Paint(self, points=None):
         logger.info('Paint')
+        fig = plt.figure()
         x = []
         y = []
         z = []
         K = self.paint_K
         psi = self.__psi
-        borders = []
+        segments = []
+        colors = []
 
         # local functions per node count
         lfnn = 2**self.dim
@@ -264,12 +268,25 @@ class Spline():
             for i,el in enumerate(self.elements):
                 _x = [_el + el.mn for _el in elem_steps]
                 x.extend(_x)
-                y.extend([list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x])
-                borders.append(el.mn)
+                _y = [list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x]
+                y.extend(_y)
+                segments.extend([[xx,yy] for xx, yy in _x,_y])
+                colors.extend(np.ones(K)*i)
             _x = el.mn + self.h[0]
             x.append(_x)
             y.append(list(accumulate([self.answer[v+i*lfnn] * psi(el, _x, v) for v in rle]))[-1])
-            plt.plot(x, y, '-')
+
+            ax = fig.gca()
+            s = 'r|b|'*(self.nElem//2)
+            s = s.split('|')
+            cmap = ListedColormap(s)
+            norm = BoundaryNorm(range(K), cmap.N)
+            lc = LineCollection(segments, cmap=cmap, norm=norm)
+            lc.set_array(colors)
+            lc.set_linewidth(2)
+            ax.add_collection(lc)
+
+            # plt.plot(x, y, '-', color=rgba)
             if points:
                 xs = []
                 ys = []
@@ -279,7 +296,6 @@ class Spline():
                 plt.plot(xs, ys, 'o')
             plt.show()
         elif self.dim == 2:
-            fig = plt.figure()
             ax = fig.gca(projection='3d')   
             elem_steps = []
             rng = range(K+1)
