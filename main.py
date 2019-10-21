@@ -44,10 +44,11 @@ class PointsFabric():
 def main():
     logger.info('Start')
 
-    f = PointsFabric(1, lambda x: x*x,lambda x: 0,[[-1,1,0.2]])
+    # f = PointsFabric(1, lambda x: x*x,lambda x: (6-abs(x-6)*1)*1,[[0,10,1]])
+    f = PointsFabric(2, lambda x,y: x*x,lambda x,y: 0,[[0,1,0.1],[0,1,0.1]])
     potins = f.generate()
 
-    s = Spline('input.txt', [1], 10)
+    s = Spline('input.txt', [4,2], 50)
     s.MakeMatrix()
     np.savetxt('before_solveA.txt',s.A, fmt='%1.2e')
     np.savetxt('before_solveF.txt',s.F, fmt='%1.2f')

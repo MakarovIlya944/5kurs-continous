@@ -10,11 +10,11 @@ from time import gmtime, strftime
 import numpy as np
 import logging
 
-with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
-    pass
-logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
-logger = logging.getLogger('Main')
-
+# with open(f'log-{strftime("%H-%M-%S", gmtime())}.txt','w') as f:
+#     pass
+# logging.basicConfig(filename=f'log-{strftime("%H-%M-%S", gmtime())}.txt', level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('Spline')
 
 numberLocalMatrix = 0
 
@@ -146,7 +146,7 @@ class Spline():
         self.mn = mn
         self.mx = mx
         K = self.K
-        k_part = 1.10
+        k_part = 1.0010
         mx *= k_part
         self.h = (mx - mn) * (1.0 / K)
         h = self.h
@@ -283,16 +283,24 @@ class Spline():
             ax = fig.gca(projection='3d')   
             elem_steps = []
             rng = range(K+1)
-            z = [np.zeros(self.kElem[0] * K + 1) for el in range(self.kElem[1] * K + 1)]
+            z = [np.zeros(self.kElem[1] * K + 1) for el in range(self.kElem[0] * K + 1)]
             for i in range(self.dim):
-                elem_steps.append(list(accumulate(np.insert(np.ones(K) * (self.h[i] / K), 0, 0))))
-            for i,el_x in enumerate(self.elements):
+                tmp = np.ones(K) * (self.h[i] / K)
+                tmp = np.insert(tmp, 0, 0)[:-1]
+                tmp = list(accumulate(tmp))
+                elem_steps.append(tmp)
+
+            for el_x in self.elements:
                 _x = [_el + el_x[0].mn[0] for _el in elem_steps[0]]
                 x.extend(_x)
+            x.append(self.mx[0])
+            for el_y in self.elements[0]:
+                _y = [_el + el_y.mn[1] for _el in elem_steps[1]]
+                y.extend(_y)
+            y.append(self.mx[1])
+
+            for i,el_x in enumerate(self.elements):
                 for j,el_y in enumerate(el_x):
-                    _y = [_el + el_y.mn[1] for _el in elem_steps[1]]
-                    if i == 0:
-                        y.extend(_y)
                     for cur_x in rng:
                         for cur_y in rng:
                             _I = i*K + cur_x
