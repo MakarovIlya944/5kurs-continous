@@ -2,6 +2,7 @@ import argparse
 import logging
 import numpy as np
 from Spline import Spline
+from Net import NetFabric
 from Painter import Painter
 import matplotlib.pyplot as plt
 import math
@@ -28,7 +29,7 @@ class PointsFabric():
         self.d = dim
         self.rnd = random
 
-    def generate(self):
+    def Generate(self):
         points = []
         data = []
         if self.d == 1:
@@ -48,36 +49,39 @@ class PointsFabric():
                         data.append(np.array([x, y, z, self.f(x,y,z)]))
         np.savetxt('input.txt', points)
         return data, points
-            
+  
 def main():
     logger.info('Start')
 
     isShowMatrix = False
     isSaveMatrix = False
 
-    dim = 1
+    dim = 3
     if dim == 1:
         f = lambda x: x*x
-        q = lambda x: (5-abs(x-5)*1)*2
-        domains = [[0,10,1]]
-        elements = [2]
+        q = lambda x: (5-abs(x-5)*1)*np.random.rand(1) + (10 if abs(x-5) < 1 else 0) 
+        domains = [[0,10,0.5]]
+        elements = [3]
     elif dim == 2:
-        f = lambda x,y: x*x
-        q = lambda x,y: 0
-        domains = [[0,1,0.1],[0,1,0.1]]
-        elements = [1,1]
+        f = lambda x,y: x*x + y*y
+        q = lambda x,y: 100 if abs(x-2) < 1 and abs(y-2) < 1 else 0
+        domains = [[-5,5,1],[-5,5,1]]
+        elements = [2,1]
     elif dim == 3:
         f = lambda x,y,z: (x*x+y*y)*z
-        q = lambda x,y,z: ((x*x+y*y)*z)*np.random.rand(1)*0.01 + (100 if abs(x-2.5) < 1 and abs(y-2.5) < 1 else 0)
-        domains = [[0,5,0.5],[0,5,0.5],[-1,1,0.2]]
+        q = lambda x,y,z: ((x*x+y*y)*z)*np.random.rand(1)*0.01 + (100 if abs(x-2) < 1 and abs(y-2) < 1 else 0)
+        domains = [[0,5,1],[0,5,1],[-1,1,0.2]]
         elements = [2,2,1]
 
     K = 10
 
     f = PointsFabric(dim, f, q, domains)
-    clear, noise = f.generate()
+    clear, noise = f.Generate()
 
-    s = Spline('input.txt', elements, K)
+    n = NetFabric('input.txt', elements, kMn=1.01)
+    n = n.Generate(customW={0:[i for i in range(121,130)]})#customB={0:[[0,0]]}, customW={0:[10,11]}
+
+    s = Spline(n)
     s.MakeMatrix()
 
     if isSaveMatrix:
@@ -90,15 +94,13 @@ def main():
     i = 0
     for a in ans:
         try:
-            if len(a) == s.nNodes * (2**dim):
+            if len(a) == n.nNode * (2**dim):
                 np.savetxt(f'data/answer_{i}.txt', a, fmt='%1.2f')
                 i += 1
         except Exception:
             pass
 
-    p = Painter('data/answer_0.txt', dim, True, s._Spline__psi, K, s.elements, s.mx, s.kElem, s.h, clearPoints=noise)
-
-    testFunc = lambda x,y,z: x+z
+    p = Painter('data/answer_0.txt', dim, True, s._Spline__psi, K, n.elems, n.mx, n.kElem, n.h, clearPoints=clear, noisePoints=noise)
     p.Paint(True)
 
 if __name__ == '__main__':

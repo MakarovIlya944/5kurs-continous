@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-# from celluloid import Camera
+from celluloid import Camera
 from matplotlib import cm
 from itertools import accumulate, combinations_with_replacement, permutations
 from mpl_toolkits.mplot3d import Axes3D
@@ -72,7 +72,13 @@ class Painter():
             for p in self.clearPoints:
                 xs.append(p[0])
                 ys.append(p[1])
-            plt.plot(xs, ys, 'o')
+            plt.plot(xs, ys, 'o', color=(1,0,0))
+            xs = []
+            ys = []
+            for p in self.noisePoints:
+                xs.append(p[0])
+                ys.append(p[1])
+            plt.plot(xs, ys, '*', color=(0,0,1))
 
     def __paint2D(self, points=False):
         K = self.paint_K
@@ -118,11 +124,19 @@ class Painter():
             xs = []
             ys = []
             zs = []
-            for p in self.points:
+            for p in self.clearPoints:
                 xs.append(p[0])
                 ys.append(p[1])
-                zs.append(p[2]*1.1)
+                zs.append(p[2])
             ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
+            xs = []
+            ys = []
+            zs = []
+            for p in self.noisePoints:
+                xs.append(p[0])
+                ys.append(p[1])
+                zs.append(p[2])
+            ax.scatter(xs, ys, zs, marker='*', color=(0,0,1)) 
         
     def __paint3D(self, points=False, fromFile=False, testFunc=None):
 

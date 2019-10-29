@@ -15,7 +15,7 @@ class Element():
     b = 0
     mn = 0
 
-    def __init__(self, _mn, _inds):
+    def __init__(self, _mn, _inds, b=0):
         self.i = Element.n
         Element.n += 1
         self.mn = _mn
@@ -23,6 +23,7 @@ class Element():
         self.p = []
         self.f = []
         self.w = []
+        self.b = b
 
     def addP(self, point):
         self.p.append(point)
