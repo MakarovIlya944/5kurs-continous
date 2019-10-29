@@ -20,8 +20,6 @@ numberLocalMatrix = 0
 
 class Spline():
 
-    paint_K = 10
-
     K = 1
     dim = 1
 
@@ -119,12 +117,11 @@ class Spline():
         for i in mas:
             self.__elemAdd(d-1, i)
 
-    def __init__(self, file, _K, _paint_K=10, w=None):
+    def __init__(self, file, _K, w=None):
         logger.info('Init')
 
         self.__f = [Spline.__f1, Spline.__f2, Spline.__f3, Spline.__f4]
         self.K = np.array(_K)
-        self.paint_K = _paint_K
 
         points = np.loadtxt(file)
         logger.info(f'Read {points}')
