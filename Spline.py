@@ -119,7 +119,7 @@ class Spline():
         for i in mas:
             self.__elemAdd(d-1, i)
 
-    def __init__(self, file, _K, _paint_K=10):
+    def __init__(self, file, _K, _paint_K=10, w=None):
         logger.info('Init')
 
         self.__f = [Spline.__f1, Spline.__f2, Spline.__f3, Spline.__f4]
@@ -152,6 +152,7 @@ class Spline():
         h = self.h
 
         self.w = np.ones(len(points))
+        # self.w[5]=0
         
         for _h in self.h:
             self.__localMatrixes.append(Spline.__localMatrix(_h))
@@ -175,18 +176,18 @@ class Spline():
         self._A = np.copy(self.A)
         self.F = np.zeros(len(l))
 
-        logger.info('-' * 45)
+        logger.debug('-' * 45)
         for I,el in enumerate(points):
             p = np.floor((el-mn)/h)
             p = list([int(i) if K[ind] != int(i) else K[ind] - 1 for ind,i in enumerate(p)])
             t = self.elements
             for e in range(dim):
                 t = t[p[e]]
-            logger.info(f'Point {el} added to element {t.i}')
+            logger.debug(f'Point {el} added to element {t.i}')
             t.addP(el)
             t.addF(f[I])
             t.addW(self.w[I])
-        logger.info('-' * 45)
+        logger.debug('-' * 45)
 
         with open(f'{dim}d.txt','r') as f:
             lines = f.readlines()
@@ -227,95 +228,18 @@ class Spline():
                 j = el.nodes[J // local_f_number] * local_f_number + J % local_f_number
                 logger.debug(f'i={i}\tj={j}')
                 
-                self._A[i][j] = numberLocalMatrix + 1
-                # self._A[i][j] = value
+                if logger.level == logging.DEBUG:
+                    self._A[i][j] = numberLocalMatrix + 1
+                    # self._A[i][j] = value
                 self.A[i][j] += value
 
             for _i, p in enumerate(el.p):
                 self.F[i] += el.w[_i] * psi(el, p, I) * el.f[_i]
-        np.savetxt(f'step_{numberLocalMatrix}.txt',self._A,fmt='%.0f')
-        numberLocalMatrix += 1
+        if logger.level == logging.DEBUG:
+            np.savetxt(f'step_{numberLocalMatrix}.txt',self._A,fmt='%.0f')
+            numberLocalMatrix += 1
 
     def Solve(self):
         logger.info('Solve')
-        self.answer = np.linalg.solve(self.A, self.F)
+        self.answer = np.linalg.lstsq(self.A, self.F, rcond=None)
         return self.answer
-
-    def Paint(self, points=None):
-        logger.info('Paint')
-        x = []
-        y = []
-        z = []
-        K = self.paint_K
-        psi = self.__psi
-        borders = []
-
-        # local functions per node count
-        lfnn = 2**self.dim
-
-        # local functions per element count 
-        lfne = 4**self.dim
-
-        # range local functions per element count
-        rle = range(lfne)
-
-        if self.dim == 1:
-            elem_steps = [self.h[0] * (el/K) for el in range(K)]
-            for i,el in enumerate(self.elements):
-                _x = [_el + el.mn for _el in elem_steps]
-                x.extend(_x)
-                y.extend([list(accumulate([self.answer[v+i*lfnn] * psi(el, y, v) for v in rle]))[-1] for y in _x])
-                borders.append(el.mn)
-            _x = el.mn + self.h[0]
-            x.append(_x)
-            y.append(list(accumulate([self.answer[v+i*lfnn] * psi(el, _x, v) for v in rle]))[-1])
-            plt.plot(x, y, '-')
-            if points:
-                xs = []
-                ys = []
-                for p in points:
-                    xs.append(p[0])
-                    ys.append(p[1])
-                plt.plot(xs, ys, 'o')
-            plt.show()
-        elif self.dim == 2:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')   
-            elem_steps = []
-            rng = range(K+1)
-            z = [np.zeros(self.kElem[1] * K + 1) for el in range(self.kElem[0] * K + 1)]
-            for i in range(self.dim):
-                tmp = np.ones(K) * (self.h[i] / K)
-                tmp = np.insert(tmp, 0, 0)[:-1]
-                tmp = list(accumulate(tmp))
-                elem_steps.append(tmp)
-
-            for el_x in self.elements:
-                _x = [_el + el_x[0].mn[0] for _el in elem_steps[0]]
-                x.extend(_x)
-            x.append(self.mx[0])
-            for el_y in self.elements[0]:
-                _y = [_el + el_y.mn[1] for _el in elem_steps[1]]
-                y.extend(_y)
-            y.append(self.mx[1])
-
-            for i,el_x in enumerate(self.elements):
-                for j,el_y in enumerate(el_x):
-                    for cur_x in rng:
-                        for cur_y in rng:
-                            _I = i*K + cur_x
-                            _J = j*K + cur_y
-                            z[_I][_J] = np.sum([self.answer[el_y.nodes[v//lfnn]*lfnn+v%lfnn] * psi(el_y, [x[_I],y[_J]], v) for v in rle])
-            y, x = np.meshgrid(y, x)
-            z = np.array(z)
-            ax.plot_surface(x, y, z)
-            if points:
-                xs = []
-                ys = []
-                zs = []
-                for p in points:
-                    xs.append(p[0])
-                    ys.append(p[1])
-                    zs.append(p[2]*1.1)
-                ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
-            plt.show()
