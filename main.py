@@ -6,6 +6,7 @@ from Net import NetFabric
 from Painter import Painter
 import matplotlib.pyplot as plt
 import math
+from decouple import config
 
 logging.basicConfig(filename='log.txt', level=logging.WARNING)
 logger = logging.getLogger('Main')
@@ -56,22 +57,55 @@ def main():
     isShowMatrix = False
     isSaveMatrix = False
 
-    dim = 3
-    if dim == 1:
-        f = lambda x: x*x
-        q = lambda x: (5-abs(x-5)*1)*np.random.rand(1) + (10 if abs(x-5) < 1 else 0) 
-        domains = [[0,10,0.5]]
-        elements = [3]
-    elif dim == 2:
-        f = lambda x,y: x*x + y*y
-        q = lambda x,y: 100 if abs(x-2) < 1 and abs(y-2) < 1 else 0
-        domains = [[-5,5,1],[-5,5,1]]
-        elements = [2,1]
-    elif dim == 3:
-        f = lambda x,y,z: (x*x+y*y)*z
-        q = lambda x,y,z: ((x*x+y*y)*z)*np.random.rand(1)*0.01 + (100 if abs(x-2) < 1 and abs(y-2) < 1 else 0)
-        domains = [[0,5,1],[0,5,1],[-1,1,0.2]]
-        elements = [2,2,1]
+    try:
+        s = 'xyz'
+        dim = config('DIM', cast=int)
+        
+        lamb1 = 'import numpy as np\ndef '
+        lamb2 = '(' + ",".join(s[:dim]) + "): return "
+
+        lamb = lamb1 + 'f1' + lamb2
+        fstr = config('FUNCTION')
+        exec(lamb + fstr, __builtins__)
+        f = f1
+
+        lamb = lamb1 + 'q1' + lamb2
+        qstr = config('ERROR')
+        exec(lamb+qstr, __builtins__)
+        q = q1
+
+        domains = config('DOMAINS').split(',')
+        domains = [[float(i) for i in d.split(' ')] for d in domains]
+        elements = config('ELEMENTS').split(' ')
+        elements = [int(d) for d in elements]
+
+        w = config('ZERO_W', default=[])
+        if w != []:
+            w = w.split(' ')
+        w = [int(i) for i in w]
+
+        b = config('DEF_B', default=0.0, cast=float)
+        
+        logger.info('Env init')
+
+    except Exception as q:
+        print(q)
+        dim = 3
+        if dim == 1:
+            f = lambda x: x*x
+            q = lambda x: (5-abs(x-5)*1)*np.random.rand(1) + (10 if abs(x-5) < 1 else 0) 
+            domains = [[0,10,0.5]]
+            elements = [3]
+        elif dim == 2:
+            f = lambda x,y: x*x + y*y
+            q = lambda x,y: 100 if abs(x-2) < 1 and abs(y-2) < 1 else 0
+            domains = [[-5,5,1],[-5,5,1]]
+            elements = [2,1]
+        elif dim == 3:
+            f = lambda x,y,z: (x*x+y*y)*z
+            q = lambda x,y,z: ((x*x+y*y)*z)*np.random.rand(1)*0.01 + (10 if abs(x-2) < 1 and abs(y-2) < 1 else 0)
+            domains = [[0,5,1],[0,5,1],[-1,0,0.1]]
+            elements = [2,2,1]
 
     K = 10
 
@@ -79,7 +113,7 @@ def main():
     clear, noise = f.Generate()
 
     n = NetFabric('input.txt', elements, kMn=1.01)
-    n = n.Generate(customW={0:[i for i in range(121,130)]})#customB={0:[[0,0]]}, customW={0:[10,11]}
+    n = n.Generate(customW={0:[i for i in w]},defB=b)#customB={0:[[0,0]]}, customW={0:[10,11]}
 
     s = Spline(n)
     s.MakeMatrix()

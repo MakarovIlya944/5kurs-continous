@@ -138,7 +138,7 @@ class Painter():
                 zs.append(p[2])
             ax.scatter(xs, ys, zs, marker='*', color=(0,0,1)) 
         
-    def __paint3D(self, points=False, fromFile=False, testFunc=None):
+    def __paint3D(self, points=False, fromFile=False, testFunc=None, gif=True):
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')   
@@ -219,6 +219,7 @@ class Painter():
                     np.savetxt(f'data/z{i}.txt', z, fmt='%1.2f')
                     i += 1
                 camera.snap()
+                fig.savefig(f'f{i}')
             animation = camera.animate()
             animation.save('data/3d.gif', writer = 'imagemagick')
         else:
