@@ -25,12 +25,13 @@ class Spline():
     net = ''
 
     indexs = []
+    bIndexs = []
 
     local_matrix = np.array([ 
-        np.array([12, 6, -12, 6]),
-        np.array([6, 4, -6, 2]),
-        np.array([-12, -6, 12, -6]),
-        np.array([6, 2, -6, 4])])
+        np.array([12 , 6 , -12, 6 ]),
+        np.array([6  , 4 , -6 , 2 ]),
+        np.array([-12, -6, 12 , -6]),
+        np.array([6  , 2 , -6 , 4 ])])
 
     A = []
     F = []
@@ -106,8 +107,11 @@ class Spline():
 
         with open(f'{dim}d.txt','r') as f:
             lines = f.readlines()
-            # Not implemented dim>10
             self.indexs = [[int(c)-1 for c in str(int(l))] for l in lines]
+
+        with open(f'{dim}d-b.txt','r') as f:
+            lines = f.readlines()
+            self.bIndexs = [[int(c)-1 for c in str(int(l))] for l in lines]
 
     def Calculate(self):
         logger.info('Calculate')
@@ -128,21 +132,22 @@ class Spline():
 
         L = self.__localMatrixes
 
-        inds = self.indexs
         for I in nums:
             for J in nums:
                 value = el.b
                 for i in range(self.dim):
-                    logger.debug(f'L[{i}][{inds[I][i]}][{inds[J][i]}] = {L[i][inds[I][i]][inds[J][i]]}')
-                    value *= L[i][inds[I][i]][inds[J][i]]
+                    _i = self.bIndexs[I][i]
+                    _j = self.bIndexs[J][i]
+                    logger.debug(f'L[{i}][{_i}][{_j}] = {L[i][_i][_j]}')
+                    value *= L[i][_i][_j]
 
                 for i, p in enumerate(el.p):
                     value += el.w[i] * psi(el, p, I) * psi(el, p, J)
-                
+
                 i = el.nodes[I // local_f_number] * local_f_number + I % local_f_number
                 j = el.nodes[J // local_f_number] * local_f_number + J % local_f_number
                 logger.debug(f'i={i}\tj={j}')
-                
+
                 if logger.level == logging.DEBUG:
                     self._A[i][j] = numberLocalMatrix + 1
                     # self._A[i][j] = value

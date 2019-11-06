@@ -93,9 +93,9 @@ def main():
     #     logger.info('Env init')
 
     # except Exception as q:
-    dim = 3
-    b = 0
-    w = []
+    dim = 2
+    b = 1E+10
+    w = []#range(154, 166)#[]
     if dim == 1:
         f = lambda x: x*x
         q = lambda x: (5-abs(x-5)*1)*np.random.rand(1) + (10 if abs(x-5) < 1 else 0)
@@ -103,21 +103,21 @@ def main():
         elements = [3]
     elif dim == 2:
         f = lambda x,y: x*x + y*y
-        q = lambda x,y: 100 if abs(x-2) < 1 and abs(y-2) < 1 else 0
-        domains = [[-5,5,1],[-5,5,1]]
-        elements = [2,1]
+        q = lambda x,y: 0#10 * np.sin(x+y)#500 if abs(x-2) < 1 and abs(y-2) < 1 else 0
+        domains = [[-5,5.1,2],[-5,5.1,2]]
+        elements = [2,2]
     elif dim == 3:
         f = lambda x,y,z: (x*x+y*y)*z
-        q = lambda x,y,z: ((x*x+y*y)*z)*np.random.rand(1)*0.1 + (500 if abs(x-2) < 1 and abs(y-2) < 1 else 0)
+        q = lambda x,y,z: 10 * np.sin(x+y+z) #((x*x+y*y)*z)*np.random.rand(1)*0.1 #+ (500 if abs(x-2) < 1 and abs(y-2) < 1 else 0)
         domains = [[0,5.1,1],[0,5.1,1],[-1,1.1,0.2]]
         elements = [2,2,1]
 
-    K = 10
+    K = 20
 
     f = PointsFabric(dim, f, q, domains)
     clear, noise = f.Generate()
 
-    n = NetFabric('input.txt', elements, kMn=1.01)
+    n = NetFabric('input.txt', elements)
     n = n.Generate(customW={0:[i for i in w]},defB=b)#customB={0:[[0,0]]}, customW={0:[10,11]}
 
     s = Spline(n)
@@ -140,19 +140,6 @@ def main():
             pass
 
     i = 0
-    # k = 0
-    # fans = ['' for r in range(8)]
-    # KK = n.kNode[0]
-    # tmp = []
-    # for el in ans[0]:
-    #     if i != 7:
-    #         tmp.append(el)
-    #         i += 1
-    #     else:
-    #         k += 1
-    #         i = 0
-
-    #     if k == KK:
     
     with open('form','w') as f:
         i = 0
@@ -165,7 +152,7 @@ def main():
                 i = 0
                 f.write('\n')
 
-    p = Painter('data/answer_0.txt', dim, True, s._Spline__psi, K, n.elems, n.mx, n.kElem, n.h, clearPoints=clear, noisePoints=noise)
+    p = Painter('data/answer_0.txt', dim, s._Spline__psi, K, n.elems, n.mx, n.kElem, n.h, clearPoints=clear, noisePoints=noise)
     p.Paint(True)
 
 if __name__ == '__main__':

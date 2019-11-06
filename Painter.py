@@ -26,7 +26,7 @@ class Painter():
 
     isPipe = False
 
-    def __init__(self, file, dim, pipeline=False, psi=None, k=None, elements=None, mx=None, kElem=None, h=None, noisePoints=None, clearPoints=None):
+    def __init__(self, file, dim, psi=None, k=None, elements=None, mx=None, kElem=None, h=None, noisePoints=None, clearPoints=None, pipeline=False):
         self.answer = np.loadtxt(file)
         self.psi = psi
         self.paint_K = k
@@ -192,93 +192,97 @@ class Painter():
             y, x = np.meshgrid(y, x)
             Z = z
 
-            i = 0
-            z = np.array(f[i])
-            ax.plot_surface(x, y, z, color='grey')
-            if points:
-                xs = []
-                ys = []
-                zs = []
-                for p in self.clearPoints:
-                    if abs(p[2] - Z[i]) < 1E-1:
-                        xs.append(p[0])
-                        ys.append(p[1])
-                        zs.append(p[3])
-                ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
-                xs = []
-                ys = []
-                zs = []
-                for p in self.noisePoints:
-                    if abs(p[2] - Z[i]) < 1E-1:
-                        xs.append(p[0])
-                        ys.append(p[1])
-                        zs.append(p[3])
-                ax.scatter(xs, ys, zs, marker='*', color=(0,0,1))
-
-            fig2 = plt.figure()
-            ax2 = Axes3D(fig2)
-
-            i = 10
-            z = np.array(f[i])
-            ax2.plot_surface(x, y, z, color='grey')
-            if points:
-                xs = []
-                ys = []
-                zs = []
-                for p in self.clearPoints:
-                    if abs(p[2] - Z[i]) < 1E-2:
-                        xs.append(p[0])
-                        ys.append(p[1])
-                        zs.append(p[3])
-                ax2.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
-                xs = []
-                ys = []
-                zs = []
-                for p in self.noisePoints:
-                    if abs(p[2] - Z[i]) < 1E-2:
-                        xs.append(p[0])
-                        ys.append(p[1])
-                        zs.append(p[3])
-                ax2.scatter(xs, ys, zs, marker='*', color=(0,0,1))
-
-            plt.show()
-
             # i = 0
-            # _____i = 0
-            # for _f in f:
-            #     z = np.array(_f)
-            #     ax.plot_surface(x, y, z, color='grey')
-            #     if points:
-            #         xs = []
-            #         ys = []
-            #         zs = []
-            #         for p in self.clearPoints:
-            #             if abs(p[2] - Z[i]) < 1E-2:
-            #                 xs.append(p[0])
-            #                 ys.append(p[1])
-            #                 zs.append(p[3])
-            #         ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
-            #         xs = []
-            #         ys = []
-            #         zs = []
-            #         for p in self.noisePoints:
-            #             if abs(p[2] - Z[i]) < 1E-2:
-            #                 xs.append(p[0])
-            #                 ys.append(p[1])
-            #                 zs.append(p[3])
-            #         ax.scatter(xs, ys, zs, marker='*', color=(0,0,1)) 
-            #     if logger.level == logging.DEBUG or self.isPipe:
-            #         np.savetxt(f'data/z{i}.txt', z, fmt='%1.2f')
-            #         i += 1
-            #     # camera.snap()
-            #     fig.savefig(f'f{i}') # clear figure of prev layer
-            #     fig.clear()
-            #     ax.clear()
-            #     fig = plt.figure()
-            #     ax = Axes3D(fig)
-            # # animation = camera.animate()
-            # # animation.save('data/3d.gif', writer = 'imagemagick')
-            # fig.show()
+            # z = np.array(f[i])
+            # ax.plot_surface(x, y, z, color='grey')
+            # if points:
+            #     xs = []
+            #     ys = []
+            #     zs = []
+            #     for p in self.clearPoints:
+            #         if abs(p[2] - Z[i]) < 1E-1:
+            #             xs.append(p[0])
+            #             ys.append(p[1])
+            #             zs.append(p[3])
+            #     ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
+            #     xs = []
+            #     ys = []
+            #     zs = []
+            #     for p in self.noisePoints:
+            #         if abs(p[2] - Z[i]) < 1E-1:
+            #             xs.append(p[0])
+            #             ys.append(p[1])
+            #             zs.append(p[3])
+            #     ax.scatter(xs, ys, zs, marker='*', color=(0,0,1))
+
+            # fig2 = plt.figure()
+            # ax2 = Axes3D(fig2)
+
+            # i = 10
+            # z = np.array(f[i])
+            # ax2.plot_surface(x, y, z, color='grey')
+            # if points:
+            #     xs = []
+            #     ys = []
+            #     zs = []
+            #     for p in self.clearPoints:
+            #         if abs(p[2] - Z[i]) < 1E-2:
+            #             xs.append(p[0])
+            #             ys.append(p[1])
+            #             zs.append(p[3])
+            #     ax2.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
+            #     xs = []
+            #     ys = []
+            #     zs = []
+            #     for p in self.noisePoints:
+            #         if abs(p[2] - Z[i]) < 1E-2:
+            #             xs.append(p[0])
+            #             ys.append(p[1])
+            #             zs.append(p[3])
+            #     ax2.scatter(xs, ys, zs, marker='*', color=(0,0,1))
+
+            # plt.show()
+
+            i = 0
+            sfig = plt.figure()
+            sax = Axes3D(sfig)
+
+            for _f in f:
+                z = np.array(_f)
+                ax.plot_surface(x, y, z, color='grey')
+                sax.plot_surface(x, y, z, color='grey')
+                if points:
+                    xs = []
+                    ys = []
+                    zs = []
+                    for p in self.clearPoints:
+                        if abs(p[2] - Z[i]) < 1E-2:
+                            xs.append(p[0])
+                            ys.append(p[1])
+                            zs.append(p[3])
+                    ax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
+                    sax.scatter(xs, ys, zs, marker='o', color=(1,0,0)) 
+                    xs = []
+                    ys = []
+                    zs = []
+                    for p in self.noisePoints:
+                        if abs(p[2] - Z[i]) < 1E-2:
+                            xs.append(p[0])
+                            ys.append(p[1])
+                            zs.append(p[3])
+                    ax.scatter(xs, ys, zs, marker='*', color=(0,0,1)) 
+                    sax.scatter(xs, ys, zs, marker='*', color=(0,0,1)) 
+                if logger.level == logging.DEBUG or self.isPipe:
+                    np.savetxt(f'data/z{i}.txt', z, fmt='%1.2f')
+                i += 1
+                camera.snap()
+                sfig.savefig(f'f{i}') # clear figure of prev layer
+                sfig.clear()
+                sax.clear()
+                sfig = plt.figure()
+                sax = Axes3D(sfig)
+            animation = camera.animate()
+            animation.save('data/3d.gif', writer = 'imagemagick')
         else:
             f = []
             for i in range(11):
